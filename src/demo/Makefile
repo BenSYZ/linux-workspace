@@ -10,12 +10,15 @@ SRCS       := $(wildcard *.c)
 TARGETS    := $(patsubst %.c, $(BUILD_DIR)/%, $(SRCS))
 
 # 4. 默认目标
-all: $(TARGETS)
+all: $(TARGETS) $(BUILD_DIR)/example.txt
 
 # 5. 核心编译规则
 # % 匹配文件名，$< 代表输入的 .c 文件，$@ 代表输出的 build/ 路径下的可执行文件
 $(BUILD_DIR)/%: %.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/example.txt: example.sh | $(BUILD_DIR)
+	./example.sh > $(BUILD_DIR)/example.txt
 
 # 6. 确保 build 目录存在的“秩序依赖”规则 (Order-only prerequisite)
 $(BUILD_DIR):
