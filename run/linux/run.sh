@@ -2,10 +2,32 @@
 this_dir="$(dirname "$(realpath "$0")")"
 cd "$this_dir" || exit 1
 
-if [ "$1" = -u ];then
-    make -C rootfses
-fi
-#qemu-system-i386-patched \
+make -C rootfses
+
+# shellcheck disable=2054
+connections=(
+    # gdb
+    #-s # -gdb tcp::1234
+    -chardev socket,path="$(realpath ../.gdb.sock)",server=on,wait=off,id=gdb_core
+    -gdb chardev:gdb_core
+
+    # ssh
+    #-nic "user,hostfwd=tcp::${PORT_SSH:-2222}-:22"
+    -nic "user,hostfwd=unix:$(realpath ../.ssh.sock)-:22"
+    #====================
+    # Host qemu-arch
+    #     ProxyCommand sh -c "nc -U \\\$(pwd)/.ssh.sock"
+    #     User root
+    #     Hostname localhost
+    #     StrictHostKeyChecking no
+    #     UserKnownHostsFile /dev/null
+    #====================
+)
+
+
+
+
+# shellcheck disable=2054
 qemu_args=(
     -kernel ./bzImage
     -initrd ./rootfses/initrd.img
@@ -13,8 +35,8 @@ qemu_args=(
     -append "console=ttyS0 nokaslr"
     -nographic
     -enable-kvm
-    -s  # Shorthand  for  -gdb  <tcp::1234>
-    -nic "user,hostfwd=tcp::2222-:22"
+    "${connections[@]}"
+    #-nic "user,hostfwd=tcp::${PORT_SSH:-2222}-:22"
     #-S # stop
     #-smp 2
     )

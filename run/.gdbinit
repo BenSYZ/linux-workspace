@@ -3,7 +3,7 @@ directory ../src/linux
 
 #symbol-file ../../src/linux/vmlinux -readnow
 symbol-file ../src/linux/vmlinux
-set-target localhost:1234
+set-target .gdb.sock
 
 add-auto-load-safe-path ../src/linux
 source ../src/linux/vmlinux-gdb.py

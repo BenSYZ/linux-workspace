@@ -3,3 +3,4 @@
 /initrd.img
 /.arch.fsck
 /initrd
+/arch.init.config

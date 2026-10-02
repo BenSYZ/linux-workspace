@@ -2,6 +2,11 @@
 nbd_dev=/dev/nbd0
 arch_qcow2=arch.qcow2
 mount_root=arch
+init_pkgs=(base openssh)
+# password
+# hostname
+# ssh_pubkey_file
+init_config=arch.init.config
 
 function_prefix="arch_qemu_"
 connected(){
@@ -30,7 +35,7 @@ _mounted(){
     local partition="$1"
     local mount_point="$2"
     local test_partition
-    test_partition="$(/usr/bin/df --output=source "$mount_point" | tail -n+2)"
+    test_partition="$(/usr/bin/df --output=source "$mount_point" 2>/dev/null | tail -n+2)"
     if [[ "$test_partition" != "$partition" ]];then
         return 1
     fi
@@ -100,6 +105,16 @@ sector-size: 512
 /dev/sda2 : start=     2099200, size=   132116480, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=F77D231A-316C-4C46-91A8-12965C534400
 EOF
     }
+
+    systemd_networkd_config(){
+   cat << EOF
+[Match]
+Name=en*
+[Network]
+DHCP=yes
+EOF
+}
+
     qemu-img create -f qcow2 "$arch_qcow2" 64G
     _connect
     # shellcheck disable=2024
@@ -111,7 +126,25 @@ EOF
     sudo mkdir -p "$mount_root"/boot
     sudo mount "$nbd_dev"p1 "$mount_root"/boot
 
-    sudo pacstrap -K "$mount_root" base openssh
+    sudo pacstrap -K "$mount_root" "${init_pkgs[@]}"
+
+    password=1
+    hostname=qemu-arch-"$(openssl rand -hex 4)"
+    ssh_pubkey_file=~/.ssh/id_rsa.pub
+    if [ -e "$init_config" ];then
+        # shellcheck disable=1090
+        source "$init_config"
+    fi
+
+    echo "root:$password"   | sudo arch-chroot "$mount_root" chpasswd
+
+    echo "$hostname"        | sudo arch-chroot "$mount_root" tee /etc/hostname >/dev/null
+    systemd_networkd_config | sudo arch-chroot "$mount_root" tee /etc/systemd/network/en.network >/dev/null
+
+    sudo arch-chroot "$mount_root" cp /etc/skel/.bash* /root
+
+    echo "PermitRootLogin prohibit-password" | sudo arch-chroot "$mount_root" tee /etc/ssh/sshd_config.d/90-enable-root.conf >/dev/null
+    { cat "$ssh_pubkey_file" || echo -n ; }  | sudo arch-chroot "$mount_root" bash -c "mkdir -p /root/.ssh && tee -a /root/.ssh/authorized_keys" >/dev/null
     _umount
     _disconnect
 }
@@ -123,9 +156,11 @@ check_env(){
     if ! [ -e "$nbd_dev" ];then
         sudo modprobe nbd nbds_max=2
     fi
-
+    local func="$1"
     if ! [ -e "$arch_qcow2" ];then
-        arch_qemu_init
+        if [ "$func" != "arch_qemu_init" ];then
+            arch_qemu_init
+        fi
     fi
 }
 
@@ -157,6 +192,15 @@ Usage:
     source $0
 EOF
 }
+arch_qemu_nspawn(){
+    _connect
+    _fsck
+    _mount
+    sudo systemd-nspawn -b -D "$mount_root" || true
+    _umount
+    _fsck
+    _disconnect
+}
 
 
 main(){
@@ -178,8 +222,7 @@ main(){
     fi
 
     func="$function_prefix$1"
-
-    check_env
+    check_env "$func"
     eval "$func"
     lsblk
     return 0
