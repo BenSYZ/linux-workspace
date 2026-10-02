@@ -2,7 +2,8 @@
 this_dir="$(dirname "$(realpath "$0")")"
 cd "$this_dir" || exit 1
 
-make -C rootfses
+# disabled for stop-fsck-start the fsck need sudo
+#make -C rootfses
 
 # shellcheck disable=2054
 connections=(
