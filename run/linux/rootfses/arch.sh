@@ -6,6 +6,7 @@ init_pkgs=(base openssh)
 # password
 # hostname
 # ssh_pubkey_file
+# proxy
 init_config=arch.init.config
 
 function_prefix="arch_qemu_"
@@ -130,7 +131,8 @@ EOF
 
     password=1
     hostname=qemu-arch-"$(openssl rand -hex 4)"
-    ssh_pubkey_file=~/.ssh/id_rsa.pub
+    ssh_pubkey_file=~/.ssh/keys/ssh.pub
+    proxy=http://10.0.2.2:20172
     if [ -e "$init_config" ];then
         # shellcheck disable=1090
         source "$init_config"
@@ -145,6 +147,11 @@ EOF
 
     echo "PermitRootLogin prohibit-password" | sudo arch-chroot "$mount_root" tee /etc/ssh/sshd_config.d/90-enable-root.conf >/dev/null
     { cat "$ssh_pubkey_file" || echo -n ; }  | sudo arch-chroot "$mount_root" bash -c "mkdir -p /root/.ssh && tee -a /root/.ssh/authorized_keys" >/dev/null
+
+    cat << EOF | sudo arch-chroot "$mount_root" tee -a /root/.bash_profile >/dev/null
+export http{,s}_proxy=$proxy
+EOF
+
     _umount
     _disconnect
 }
