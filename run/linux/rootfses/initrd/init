@@ -1,0 +1,31 @@
+#!/usr/bin/busybox sh
+
+/usr/bin/busybox --install -s /usr/bin
+
+mkdir -p /proc /dev /sys /tmp
+ln -s usr/bin /bin
+
+mount -t proc     proc  /proc
+mount -t devtmpfs dev   /dev
+mount -t sysfs    sys   /sys
+mount -t tmpfs    tmpfs /tmp
+
+
+setsid cttyhack busybox sh
+
+mkdir new_root
+mount /dev/sda2 new_root
+mount /dev/sda1 new_root/boot
+
+mkdir -p new_root/old_root
+pivot_root new_root new_root/old_root
+
+mount -t proc     proc  /proc
+mount -t devtmpfs dev   /dev
+mount -t sysfs    sys   /sys
+mount -t tmpfs    tmpfs /tmp
+exec /usr/bin/init
+#while true;do
+#    setsid cttyhack busybox sh
+#    busybox sh
+#done
