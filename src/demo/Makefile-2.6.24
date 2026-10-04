@@ -1,0 +1,14 @@
+chroot_dir=../../build/debian-4
+BUILD_DIR := build-2.6.24
+
+.PHONY: build http_server
+all: build http_server
+
+build:
+	bwrap --setenv PATH $(PATH):/bin \
+	    --bind $(chroot_dir) /       \
+	    --bind $(PWD)        $(PWD)  \
+	    make -C $(PWD) BUILD_DIR=$(BUILD_DIR)
+
+http_server: build
+	cd $(BUILD_DIR) && python3 -m http.server || true
