@@ -1,6 +1,7 @@
 # 1. 定义编译器、选项和目录
 CC         := gcc
 #CFLAGS     := -Wall -Wextra -O2
+CFLAGS     := -g
 BUILD_DIR  := build
 
 # 2. 自动获取当前目录下的所有 .c 文件
