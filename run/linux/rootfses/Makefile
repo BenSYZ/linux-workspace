@@ -1,4 +1,4 @@
-.PHONY: initrd arch
+.PHONY: initrd arch bootloader
 all: initrd arch
 
 initrd: initrd.img
@@ -13,3 +13,6 @@ arch: .arch.fsck
 	touch .arch.fsck
 arch.qcow2:
 	./arch.sh init
+
+bootloader: initrd arch
+	./arch.sh update_bootloader

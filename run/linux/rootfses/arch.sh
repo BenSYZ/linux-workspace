@@ -229,6 +229,40 @@ self_qemu_nspawn(){
     _disconnect
 }
 
+# update_bootloader
+self_qemu_ubl(){
+    _connect
+    _fsck
+    _mount
+    echo "==="
+
+
+    if [ -e "$mount_root"/boot/grub/grub.cfg ]; then
+        echo "Copy bzImage and initrd, without reconfig"
+    else
+        sudo pacstrap -K "$mount_root" efibootmgr grub
+
+        sudo arch-chroot "$mount_root" \
+            sed -i 's/^\(#GRUB_TERMINAL_OUTPUT.*\)/\1\nGRUB_TERMINAL_OUTPUT="gfxterm console"/;
+                s/^\(GRUB_CMDLINE_LINUX_DEFAULT.*\)/#\1\nGRUB_CMDLINE_LINUX="console=tty1 console=ttyS0"/' \
+                /etc/default/grub
+
+        sudo arch-chroot "$mount_root" chmod -x /etc/grub.d/31_efi_bootnext
+        sudo arch-chroot "$mount_root" grub-mkconfig -o /boot/grub/grub.cfg
+        # with --removable grub-install will install as default bootx.efi
+        # or we need to do grub-install with kernel-boot up
+        sudo arch-chroot "$mount_root" grub-install --target=x86_64-efi --efi-directory=/boot --recheck --removable
+    fi
+
+    sudo cp -v ../bzImage   arch/boot/vmlinuz-linux
+    sudo cp -v ./initrd.img arch/boot/initramfs-linux.img
+
+
+    echo "==="
+    _umount
+    _fsck
+    _disconnect
+}
 
 main(){
     # zsh: main
