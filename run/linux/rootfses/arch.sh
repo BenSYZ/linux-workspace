@@ -145,6 +145,8 @@ EOF
 
     sudo arch-chroot "$mount_root" cp /etc/skel/.bash* /root
 
+    sudo arch-chroot "$mount_root" sed -i 's/^#\(DisableSandboxFilesystem\)/\1/' /etc/pacman.conf
+
     echo "PermitRootLogin prohibit-password" | sudo arch-chroot "$mount_root" tee /etc/ssh/sshd_config.d/90-enable-root.conf >/dev/null
     { cat "$ssh_pubkey_file" || echo -n ; }  | sudo arch-chroot "$mount_root" bash -c "mkdir -p /root/.ssh && tee -a /root/.ssh/authorized_keys" >/dev/null
 
