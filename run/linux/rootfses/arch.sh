@@ -229,6 +229,16 @@ self_qemu_nspawn(){
     _disconnect
 }
 
+self_qemu_chroot(){
+    _connect
+    _fsck
+    _mount
+    sudo arch-chroot "$mount_root" || true
+    _umount
+    _fsck
+    _disconnect
+}
+
 # update_bootloader
 self_qemu_ubl(){
     _connect
