@@ -2,7 +2,7 @@
 nbd_dev=/dev/nbd0
 qcow2=arch.qcow2
 mount_root=arch
-init_pkgs=(base openssh)
+init_pkgs=(base openssh system-rc-local)
 # password
 # hostname
 # ssh_pubkey_file
@@ -145,14 +145,32 @@ EOF
 
     sudo arch-chroot "$mount_root" cp /etc/skel/.bash* /root
 
+    sudo arch-chroot "$mount_root" touch "/etc/rc.local"
+    sudo arch-chroot "$mount_root" chmod +x "/etc/rc.local"
+    sudo arch-chroot "$mount_root" systemctl enable rc-local.service
+
     sudo arch-chroot "$mount_root" sed -i 's/^#\(DisableSandboxFilesystem\)/\1/' /etc/pacman.conf
 
     echo "PermitRootLogin prohibit-password" | sudo arch-chroot "$mount_root" tee /etc/ssh/sshd_config.d/90-enable-root.conf >/dev/null
     { cat "$ssh_pubkey_file" || echo -n ; }  | sudo arch-chroot "$mount_root" bash -c "mkdir -p /root/.ssh && tee -a /root/.ssh/authorized_keys" >/dev/null
+    cat << EOF | sudo arch-chroot "$mount_root" tee /root/linkup.sh >/dev/null
+#!/bin/bash
+ip link set ens3 up
+ip address add 10.0.2.15/24 dev ens3
+ip route add default via 10.0.2.2
+EOF
+    sudo arch-chroot "$mount_root" chmod +x /root/linkup.sh >/dev/null
+
+    cat << EOF | sudo arch-chroot "$mount_root" tee /root/sshd.sh >/dev/null
+#!/bin/bash
+systemctl start sshd
+EOF
+    sudo arch-chroot "$mount_root" chmod +x /root/sshd.sh >/dev/null
 
     cat << EOF | sudo arch-chroot "$mount_root" tee -a /root/.bash_profile >/dev/null
 export http{,s}_proxy=$proxy
 EOF
+
 
     _umount
     _disconnect
