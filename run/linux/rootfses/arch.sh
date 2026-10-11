@@ -1,6 +1,6 @@
 #!/bin/bash -e
 nbd_dev=/dev/nbd0
-arch_qcow2=arch.qcow2
+qcow2=arch.qcow2
 mount_root=arch
 init_pkgs=(base openssh)
 # password
@@ -9,9 +9,9 @@ init_pkgs=(base openssh)
 # proxy
 init_config=arch.init.config
 
-function_prefix="arch_qemu_"
+function_prefix="self_qemu_"
 connected(){
-    if ! pgrep -f "qemu-nbd --connect=$nbd_dev $arch_qcow2" &>/dev/null;then
+    if ! pgrep -f "qemu-nbd --connect=$nbd_dev $qcow2" &>/dev/null;then
         return 1
     fi
     return 0
@@ -23,7 +23,7 @@ _connect(){
     #    __connect "$NBD_DEV" "$arch_qcow2"
     #fi
     if ! connected;then
-        sudo qemu-nbd --connect="$nbd_dev" "$arch_qcow2"
+        sudo qemu-nbd --connect="$nbd_dev" "$qcow2"
     fi
 }
 _disconnect(){
@@ -74,24 +74,24 @@ _fsck(){
     { sudo fsck.fat -a "$nbd_dev"p1 || sudo fsck.fat -a "$nbd_dev"p1 ; }
     sudo fsck.ext4 "$nbd_dev"p2
 }
-arch_qemu_mount(){
+self_qemu_mount(){
     _connect
     _fsck
     _mount
 }
-arch_qemu_fsck(){
+self_qemu_fsck(){
     _connect
     _umount
     _fsck
     _disconnect
 }
-arch_qemu_umount(){
+self_qemu_umount(){
     _umount
     _fsck
     _disconnect
 }
 
-arch_qemu_init(){
+self_qemu_init(){
     partion_table(){
         cat << EOF
 label: gpt
@@ -116,7 +116,7 @@ DHCP=yes
 EOF
 }
 
-    qemu-img create -f qcow2 "$arch_qcow2" 64G
+    qemu-img create -f qcow2 "$qcow2" 64G
     _connect
     # shellcheck disable=2024
     sudo sfdisk "$nbd_dev" < <(partion_table)
@@ -164,9 +164,9 @@ check_env(){
         sudo modprobe nbd nbds_max=2
     fi
     local func="$1"
-    if ! [ -e "$arch_qcow2" ];then
-        if [ "$func" != "arch_qemu_init" ];then
-            arch_qemu_init
+    if ! [ -e "$qcow2" ];then
+        if [ "$func" != "self_qemu_init" ];then
+            self_qemu_init
         fi
     fi
 }
@@ -199,7 +199,7 @@ Usage:
     source $0
 EOF
 }
-arch_qemu_nspawn(){
+self_qemu_nspawn(){
     _connect
     _fsck
     _mount
