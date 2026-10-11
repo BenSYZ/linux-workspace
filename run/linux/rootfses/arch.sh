@@ -92,23 +92,23 @@ self_qemu_umount(){
 }
 
 self_qemu_init(){
-    partion_table(){
+    partition_table(){
+        # dumped with sfdisk -d /dev/sda with remove uuid
         cat << EOF
 label: gpt
-label-id: 16F3BE78-02B0-4909-9601-9EAFC64A0308
 device: /dev/sda
 unit: sectors
 first-lba: 2048
 last-lba: 134217694
 sector-size: 512
 
-/dev/sda1 : start=        2048, size=     2097152, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B, uuid=13C0C4AC-9601-4486-8632-D8A8F431D34F
-/dev/sda2 : start=     2099200, size=   132116480, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, uuid=F77D231A-316C-4C46-91A8-12965C534400
+/dev/sda1 : start=        2048, size=     2097152, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B
+/dev/sda2 : start=     2099200, size=   132116480, type=0FC63DAF-8483-4772-8E79-3D69D8477DE4
 EOF
     }
 
     systemd_networkd_config(){
-   cat << EOF
+       cat << EOF
 [Match]
 Name=en*
 [Network]
@@ -119,7 +119,7 @@ EOF
     qemu-img create -f qcow2 "$qcow2" 64G
     _connect
     # shellcheck disable=2024
-    sudo sfdisk "$nbd_dev" < <(partion_table)
+    sudo sfdisk "$nbd_dev" < <(partition_table)
     sudo mkfs.fat -F 32 "$nbd_dev"p1
     sudo mkfs.ext4 "$nbd_dev"p2
 
