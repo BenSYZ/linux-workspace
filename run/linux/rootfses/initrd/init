@@ -10,8 +10,10 @@ mount -t devtmpfs dev   /dev
 mount -t sysfs    sys   /sys
 mount -t tmpfs    tmpfs /tmp
 
-
-setsid cttyhack busybox sh
+echo "ctrl+c to run sh"
+if ! setsid cttyhack timeout 3 sleep 1;then
+    setsid cttyhack busybox sh
+fi
 
 mkdir new_root
 mount /dev/sda2 new_root
