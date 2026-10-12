@@ -244,8 +244,9 @@ self_qemu_ubl(){
     _connect
     _fsck
     _mount
-    echo "==="
 
+    sudo install -vT ../bzImage   arch/boot/vmlinuz-linux
+    sudo install -vT ./initrd.img arch/boot/initramfs-linux.img
 
     if [ -e "$mount_root"/boot/grub/grub.cfg ]; then
         echo "Copy bzImage and initrd, without reconfig"
@@ -265,11 +266,7 @@ self_qemu_ubl(){
         sudo arch-chroot "$mount_root" grub-mkconfig -o /boot/grub/grub.cfg
     fi
 
-    sudo cp -v ../bzImage   arch/boot/vmlinuz-linux
-    sudo cp -v ./initrd.img arch/boot/initramfs-linux.img
 
-
-    echo "==="
     _umount
     _fsck
     _disconnect
