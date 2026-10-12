@@ -286,7 +286,7 @@ self_qemu_ubl(){
 
         sudo arch-chroot "$mount_root" \
             sed -i 's/^\(#GRUB_TERMINAL_OUTPUT.*\)/\1\nGRUB_TERMINAL_OUTPUT="gfxterm console"/;
-                s/^\(GRUB_CMDLINE_LINUX_DEFAULT.*\)/#\1\nGRUB_CMDLINE_LINUX="console=tty1 console=ttyS0"/' \
+                s/^\(GRUB_CMDLINE_LINUX_DEFAULT.*\)/#\1\nGRUB_CMDLINE_LINUX="nokconsole=tty1 console=ttyS0 nokaslr"/' \
                 /etc/default/grub
 
         sudo arch-chroot "$mount_root" chmod -x /etc/grub.d/31_efi_bootnext
