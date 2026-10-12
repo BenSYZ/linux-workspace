@@ -2,7 +2,7 @@
 nbd_dev=/dev/nbd0
 qcow2=arch.qcow2
 mount_root=arch
-init_pkgs=(base openssh system-rc-local)
+init_pkgs=(base openssh)
 # password
 # hostname
 # ssh_pubkey_file
@@ -145,9 +145,34 @@ EOF
 
     sudo arch-chroot "$mount_root" cp /etc/skel/.bash* /root
 
-    sudo arch-chroot "$mount_root" touch "/etc/rc.local"
+    sudo mkdir "$mount_root"/pkgs
+    sudo mount --bind -o ro ../pkgs/ "$mount_root"/pkgs
+
+    pkg_file(){
+        echo -n "/pkgs/"
+        find ../pkgs/"$1"* -exec basename {} \; |grep -vE 'sig$' | tail -n1
+    }
+    sudo arch-chroot "$mount_root" pacman -S --noconfirm python
+    sudo arch-chroot "$mount_root" pacman -U --noconfirm \
+        "$(pkg_file archlinuxcn-keyring)"
+    sudo arch-chroot "$mount_root" pacman -U --noconfirm \
+        "$(pkg_file systemd-rc-local)" \
+        "$(pkg_file pacman-archive)"
+
+    # shellcheck disable=2024
+    echo '#!/bin/bash' | sudo arch-chroot "$mount_root" tee "/etc/rc.local" >/dev/null
     sudo arch-chroot "$mount_root" chmod +x "/etc/rc.local"
     sudo arch-chroot "$mount_root" systemctl enable rc-local.service
+
+    sudo arch-chroot "$mount_root" mv /var/lib/pacman-archive/pacman.conf /etc/pacman.conf
+
+
+    sudo pkill -f -- "gpg-agent --homedir $(realpath $mount_root)"'/*etc/pacman.d/gnupg'
+
+    sudo umount "$mount_root"/pkgs
+    sudo rmdir "$mount_root"/pkgs
+
+    # TODO: fstab
 
     sudo arch-chroot "$mount_root" sed -i 's/^#\(DisableSandboxFilesystem\)/\1/' /etc/pacman.conf
 
@@ -155,8 +180,9 @@ EOF
     { cat "$ssh_pubkey_file" || echo -n ; }  | sudo arch-chroot "$mount_root" bash -c "mkdir -p /root/.ssh && tee -a /root/.ssh/authorized_keys" >/dev/null
     cat << EOF | sudo arch-chroot "$mount_root" tee /root/linkup.sh >/dev/null
 #!/bin/bash
-ip link set ens3 up
-ip address add 10.0.2.15/24 dev ens3
+iface="\$(ip a |awk -v FS=': ' '{if (\$1=="2"){print \$2}}')"
+ip link set "\$iface" up
+ip address add 10.0.2.15/24 dev "\$iface"
 ip route add default via 10.0.2.2
 EOF
     sudo arch-chroot "$mount_root" chmod +x /root/linkup.sh >/dev/null
@@ -170,6 +196,7 @@ EOF
     cat << EOF | sudo arch-chroot "$mount_root" tee -a /root/.bash_profile >/dev/null
 export http{,s}_proxy=$proxy
 EOF
+    sudo umount -R "$mount_root"
 
 
     _umount

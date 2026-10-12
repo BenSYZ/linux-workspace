@@ -5,7 +5,7 @@ initrd_root="initrd"
 extract_busybox(){
     local extract_dir=".busybox_extract"
     mkdir -p "$extract_dir"
-    tar --zstd -xf "$(find ../busybox/ -name "busybox-*.pkg.tar.zst" | tail -n 1)" -C "$extract_dir"
+    tar --zstd -xf "$(find ../pkgs/ -name "busybox-*.pkg.tar.zst" | tail -n 1)" -C "$extract_dir"
     install -D --target-directory "$initrd_root"/usr/bin/ "$extract_dir"/usr/bin/busybox
     rm -r "$extract_dir"
 }
