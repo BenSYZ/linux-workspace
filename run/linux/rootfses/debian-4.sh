@@ -125,9 +125,9 @@ EOF
     # shellcheck disable=2024
     sudo sfdisk "$nbd_dev" < <(partition_table)
     # 没驱动：
-    # mount: Mounting /dev/hda1 on /root failed: No such file or directory
+    # mount: Mounting /dev/sda1 on /root failed: No such file or directory
     # Inode 大小不对
-    # mount: Mounting /dev/hda1 on /root failed: Invalid argument
+    # mount: Mounting /dev/sda1 on /root failed: Invalid argument
     sudo mkfs.ext3 -I 128 "$nbd_dev"p2
 
     sudo mount "$nbd_dev"p2 "$mount_root"
@@ -317,13 +317,13 @@ timeout             2
 
 title               GNU/Linux, kernel 2.6.24, nographic
 root                (hd0,1)
-kernel              /boot/vmlinuz-linux root=/dev/hda2 ro console=ttyS0 nokaslr
+kernel              /boot/vmlinuz-linux root=/dev/sda2 ro console=ttyS0 nokaslr
 initrd              /boot/initramfs-linux.img
 #savedefault
 
 title               GNU/Linux, kernel 2.6.24
 root                (hd0,1)
-kernel              /boot/vmlinuz-linux root=/dev/hda2 ro nokaslr
+kernel              /boot/vmlinuz-linux root=/dev/sda2 ro nokaslr
 initrd              /boot/initramfs-linux.img
 #savedefault
 EOF
@@ -331,7 +331,7 @@ EOF
         cat << EOF | sudo arch-chroot "$mount_root" env PATH="$debian_path" tee /root/install_grub.sh >/dev/null
 #!/bin/bash
 cat << EOF_GRUB | grub --batch
-device (hd0) /dev/hda
+device (hd0) /dev/sda
 root (hd0,1)
 cat /boot/grub/menu.lst
 setup (hd0)
