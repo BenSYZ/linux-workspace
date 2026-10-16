@@ -1,0 +1,32 @@
+#!/bin/bash
+main(){
+    this_dir="$(dirname "$(realpath "$0")")"
+    mount_root="${this_dir}/../build/debian-4"
+    if ! [ -e "$mount_root"/bin ];then
+        echo mount "$mount_root" first
+        exit 1
+    fi
+    debian_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+    src_dir="$this_dir"
+    if ! [ -e "$mount_root$src_dir" ];then
+        sudo mkdir -p "$mount_root$src_dir"
+        sudo chown "$UID":"$UID" "$mount_root$src_dir"
+    fi
+
+    bwrap \
+        --setenv PATH "$debian_path" \
+        --setenv TERM "xterm"        \
+        --bind "$mount_root" /       \
+        --dev /dev                   \
+        --bind "$src_dir" "$src_dir" \
+        --uid 0                      \
+        --gid 0                      \
+        --chdir "$PWD"               \
+        "${@:-/bin/bash}"
+        #--bind "$PWD" "$PWD" \
+
+    return 0
+}
+main "$@"
+
