@@ -87,7 +87,7 @@ is_graphic(){
             return 1
         fi
     done
-    echo 0
+    return 0
 }
 
 main(){
