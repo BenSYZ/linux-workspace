@@ -28,6 +28,7 @@ main(){
 
 
     sudo mount "$build_img" "$mount_root"
+    sudo mount --bind ./pkgs/archives "$mount_root"/var/cache/apt/archives
 
     sudo arch-chroot "$mount_root" env PATH="$debian_path" apt-get -y update
     sudo arch-chroot "$mount_root" env PATH="$debian_path" \
@@ -35,6 +36,7 @@ main(){
     sudo arch-chroot "$mount_root" env PATH="$debian_path" \
         apt-get -y install ncurses-dev ctags
 
+    sudo umount "$mount_root"/var/cache/apt/archives
     sudo umount "$mount_root"
 
     return 0

@@ -132,13 +132,13 @@ EOF
 
     sudo mount "$nbd_dev"p2 "$mount_root"
 
-    if [ -e "../pkgs/archives" ];then
-        sudo debootstrap --cache-dir="$(realpath ../pkgs/archives)" \
-                         --no-check-sig --arch=amd64 etch "$mount_root" http://archive.debian.org/debian
-    else
-        sudo debootstrap --no-check-sig --arch=amd64 etch "$mount_root" http://archive.debian.org/debian
-    fi
+    mkdir -p ../pkgs/archives
+    sudo debootstrap --cache-dir="$(realpath ../pkgs/archives)" \
+                     --no-check-sig --arch=amd64 etch "$mount_root" http://archive.debian.org/debian
     sudo chroot "$mount_root" /bin/mkdir -p /run
+
+    sudo arch-chroot "$mount_root" env PATH="$debian_path" find /var/cache/apt/ -xdev -name '*.deb' -exec rm {} +
+    sudo mount --bind ../pkgs/archives "$mount_root"/var/cache/apt/archives # umount at umount -R
 
     #sudo cp helper/merge_usr "$mount_root"
     #sudo cp initrd/usr/bin/busybox "$mount_root"
