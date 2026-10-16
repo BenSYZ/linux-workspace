@@ -1,4 +1,4 @@
-#!/usr/bin/busybox sh
+#!/usr/bin/sh
 
 /usr/bin/busybox --install -s /usr/bin
 
@@ -13,21 +13,83 @@ mount -t tmpfs    tmpfs /tmp
 echo "ctrl+c to run sh"
 if ! setsid cttyhack timeout 3 sleep 1;then
     setsid cttyhack busybox sh
+    if [ -e exec ];then
+        exec /usr/bin/sh
+    fi
 fi
 
-mkdir new_root
+mkdir -p new_root
 mount /dev/sda2 new_root
 mount /dev/sda1 new_root/boot
 
-mkdir -p new_root/old_root
-pivot_root new_root new_root/old_root
+mount --move /proc /new_root/proc
+mount --move /sys  /new_root/sys
+mount --move /dev  /new_root/dev
+mount --move /tmp  /new_root/tmp
 
-mount -t proc     proc  /proc
-mount -t devtmpfs dev   /dev
-mount -t sysfs    sys   /sys
-mount -t tmpfs    tmpfs /tmp
-exec /usr/bin/init
-#while true;do
-#    setsid cttyhack busybox sh
-#    busybox sh
-#done
+# 1. mountpoint: not released
+# 2. file in ramfs: umount by ourself
+exec_pivot_root(){
+    # umount by ourself later
+    mkdir -p new_root/old_root
+    pivot_root new_root new_root/old_root
+
+    # S1: free fd in old_root
+    exec 1>/dev/console
+    exec 2>/dev/console
+    exec 0</dev/console
+
+    # S2: free init in old_root
+    #exec /usr/bin/sh
+    #exec /usr/bin/init
+    exec "$@"
+}
+
+# the recommand way in Linux kernel
+exec_pivot_root2(){
+    # shellcheck disable=2164
+    cd new_root
+    pivot_root . .
+
+    # S1: free fd in old_root
+    exec 1>/dev/console
+    exec 2>/dev/console
+    exec 0</dev/console
+
+    umount -l /
+    # S2: free init in old_root
+    #exec /usr/bin/sh
+    #exec /usr/bin/init
+    exec "$@"
+}
+# 1. mountpoint: not released
+# 2. file in ramfs: deleted
+exec_switch_root(){
+    exec 1>/new_root/dev/console
+    exec 2>/new_root/dev/console
+    exec 0</new_root/dev/console
+
+    exec switch_root /new_root "$@"
+    #exec run-init /new_root "$@"
+}
+
+# 1. mountpoint: not released
+# 2. file in ramfs: delete manually
+exec_chroot(){
+    exec 1>/new_root/dev/console
+    exec 2>/new_root/dev/console
+    exec 0</new_root/dev/console
+
+    find / -xdev ! -type d -exec rm {} +
+    find / -xdev -type d -exec rmdir -p {} + 2>/new_root/dev/null
+    find / -xdev
+
+    #exec switch_root new_root /bin/sh
+    exec chroot /new_root "$@"
+}
+
+init=/bin/init
+#exec_pivot_root "$init"
+exec_pivot_root "$init"
+#exec_switch_root "$init"
+#exec_chroot "$init"

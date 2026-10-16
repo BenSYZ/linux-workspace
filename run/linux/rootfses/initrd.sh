@@ -13,6 +13,9 @@ main(){
     if ! [ -e "$initrd_root"/usr/bin/busybox ];then
         extract_busybox
     fi
+    if ! [ -e "$initrd_root"/usr/bin/sh ];then
+        ln -s busybox "$initrd_root"/usr/bin/sh
+    fi
     #(
     #    cd "$initrd_root"
     #    find . |cpio -R 0:0  -o --format=newc  > ../initrd.img
