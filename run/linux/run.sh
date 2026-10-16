@@ -29,8 +29,8 @@ connections=(
 kernel_parameters=(
     nokaslr
     root=/dev/sda2
-    console=ttyS0
-    console=tty1
+    #console=tty1
+    #console=ttyS0
     #init=/bin/bash
     #rdinit=/bin/init
     )
@@ -40,7 +40,6 @@ kernel_parameters=(
 qemu_args_kernel=(
     -kernel ./bzImage
     -initrd ./rootfses/initrd.img
-    -append "${kernel_parameters[*]}"
     )
 
 # shellcheck disable=2054
@@ -82,12 +81,37 @@ qemu_args=(
     "${connections[@]}"
     )
 
-qemu_args+=("${qemu_args_kernel[@]}")
-#qemu_args+=("${qemu_args_efi[@]}")
-#qemu_args+=("${qemu_args_bios[@]}")
-qemu_args+=("$@")
+is_graphic(){
+    for arg in "$@";do
+        if [[ "$arg" =~ -+"nographic" ]];then
+            return 1
+        fi
+    done
+    echo 0
+}
 
-for arg in "${qemu_args[@]}";do
-    echo "$arg"
-done
-exec qemu-system-x86_64 "${qemu_args[@]}"
+main(){
+    # /dev/console=last console=
+    if is_graphic "$@";then
+        kernel_parameters+=("console=ttyS0")
+        kernel_parameters+=("console=tty1")
+    else
+        kernel_parameters+=("console=tty1")
+        kernel_parameters+=("console=ttyS0")
+    fi
+
+    qemu_args_kernel+=(-append "${kernel_parameters[*]}")
+    qemu_args+=("${qemu_args_kernel[@]}")
+    #qemu_args+=("${qemu_args_efi[@]}")
+    #qemu_args+=("${qemu_args_bios[@]}")
+    qemu_args+=("$@")
+
+    for arg in "${qemu_args[@]}";do
+        echo "$arg"
+    done
+    exec qemu-system-x86_64 "${qemu_args[@]}"
+
+    return 0
+}
+main "$@"
+
