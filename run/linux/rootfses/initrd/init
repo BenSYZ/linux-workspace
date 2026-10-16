@@ -6,9 +6,31 @@ mkdir -p /proc /dev /sys /tmp
 ln -s usr/bin /bin
 
 mount -t proc     proc  /proc
-mount -t devtmpfs dev   /dev
+mount -t tmpfs    dev   /dev
 mount -t sysfs    sys   /sys
 mount -t tmpfs    tmpfs /tmp
+
+#[ -e /dev/console ] || mknod /dev/console c 5 1
+#[ -e /dev/null ] || mknod /dev/null c 1 3
+
+## debian initrd: scripts/init-premount/udev
+if [ -e sbin/udevd ];then
+    echo > /proc/sys/kernel/hotplug
+
+    mkdir -p /dev/.udev/db/
+    udevd --daemon
+
+    mkdir -p /dev/.udev/queue/
+    udevtrigger
+    udevsettle || true
+fi
+## debian initrd: scripts/init-premount/udev
+[ -e /dev/hda  ]    || mknod /dev/hda     b 3 0
+[ -e /dev/hda1 ]    || mknod /dev/hda1    b 3 1
+[ -e /dev/hda2 ]    || mknod /dev/hda2    b 3 2
+[ -e /dev/console ] || mknod /dev/console c 5 1
+[ -e /dev/tty1 ]   || mknod /dev/tty1     c 4 1
+[ -e /dev/ttyS0 ]   || mknod /dev/ttyS0   c 4 64
 
 echo "ctrl+c to run sh"
 if ! setsid cttyhack timeout 3 sleep 1;then
@@ -19,8 +41,8 @@ if ! setsid cttyhack timeout 3 sleep 1;then
 fi
 
 mkdir -p new_root
-mount /dev/sda2 new_root
-mount /dev/sda1 new_root/boot
+mount /dev/hda2 new_root
+#mount /dev/hda1 new_root/boot
 
 mount --move /proc /new_root/proc
 mount --move /sys  /new_root/sys
@@ -88,8 +110,8 @@ exec_chroot(){
     exec chroot /new_root "$@"
 }
 
-init=/bin/init
+init=/sbin/init
+# does not support in 2.6.24, ramfs cannot be pivot_root
 #exec_pivot_root "$init"
-exec_pivot_root "$init"
 #exec_switch_root "$init"
-#exec_chroot "$init"
+exec_chroot "$init"

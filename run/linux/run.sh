@@ -28,11 +28,12 @@ connections=(
 # shellcheck disable=2054
 kernel_parameters=(
     nokaslr
-    root=/dev/sda2
-    #console=tty1
+    #root=/dev/sda2
+    root=/dev/hda2
     #console=ttyS0
+    #console=tty1
     #init=/bin/bash
-    #rdinit=/bin/init
+    #rdinit=/bin/bash
     )
 
 
@@ -40,10 +41,18 @@ kernel_parameters=(
 qemu_args_kernel=(
     -kernel ./bzImage
     -initrd ./rootfses/initrd.img
+
+    #-kernel /mnt/isolinux/vmlinuz
+    #-initrd /mnt/isolinux/initrd.img
+    #-kernel /tmp/ben/tmp.1791956659_whh/bzImage
+    #-initrd /tmp/ben/tmp.1791956659_whh/rootfs.img.2
+    #-append "${kernel_parameters[*]}"
     )
 
 # shellcheck disable=2054
 qemu_args_bios=(
+    --drive media=cdrom,file=../arch/Archlinux-x86_64-2008.03-1-archboot.core.iso,readonly
+    -boot once=d
     )
 
 # shellcheck disable=2054
@@ -62,17 +71,19 @@ qemu_args=(
     #-smp 2
 
 
-    -blockdev driver=file,node-name=disk_file,filename=./rootfses/arch.qcow2
-    -blockdev driver=qcow2,node-name=disk,file=disk_file
+    -drive file=./rootfses/debian-4.qcow2
+    #-drive file=/home/ben/work/grub/grub-0.97/run/disk.img
+    # > -blockdev driver=file,node-name=disk_file,filename=./rootfses/debian-4.qcow2
+    # > -blockdev driver=qcow2,node-name=disk,file=disk_file
 
-    # pcie -> ata
-    -device driver=ich9-ahci,id=ata_card,addr=04.0
-    # ata backend
-    -device driver=ide-hd,drive=disk,bus=ata_card.0
-    ##-device driver=ide-hd,drive=disk,bus=ide.0
+    # > # pcie -> ata
+    # > -device driver=ich9-ahci,id=ata_card,addr=04.0
+    # > # ata backend
+    # > -device driver=ide-hd,drive=disk,bus=ata_card.0
+    # > ##-device driver=ide-hd,drive=disk,bus=ide.0
 
-    # pcie -> virtio
-    #-device driver=virtio-blk-pci,id=virtio_card,drive=disk
+    # > # pcie -> virtio
+    # > #-device driver=virtio-blk-pci,id=virtio_card,drive=disk
 
     -fsdev local,id=fsdev0,path=/tmp/ben,security_model=mapped
     -device virtio-9p-pci,fsdev=fsdev0,mount_tag=hostshare,id=virtio_card1

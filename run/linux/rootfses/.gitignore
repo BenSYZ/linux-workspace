@@ -1,6 +1,6 @@
-/arch.qcow2
-/arch
+/debian-4.qcow2
+/debian-4
 /initrd.img
-/.arch.fsck
+/.debian-4.fsck
 /initrd
-/arch.init.config
+/debian-4.init.config
