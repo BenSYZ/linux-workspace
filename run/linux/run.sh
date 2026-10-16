@@ -65,7 +65,6 @@ qemu_args_efi=(
 qemu_args=(
     -enable-kvm
     -m 2G
-    -device virtio-vga
     #-nographic
     #-S # stop
     #-smp 2
@@ -100,22 +99,39 @@ is_graphic(){
     done
     return 0
 }
+select_arg_template(){
+    local _qemu_arg=("${qemu_args_kernel[@]}")
+    for arg in "$@";do
+        case "$arg" in
+            "-k")
+                _qemu_arg=("${qemu_args_kernel[@]}")
+                ;;
+            "-b")
+                _qemu_arg=("${qemu_args_bios[@]}")
+                ;;
+            "-e")
+                _qemu_arg=("${qemu_args_efi[@]}")
+                ;;
+            *)
+                qemu_args+=("$arg")
+                ;;
+        esac
+    done
+    qemu_args+=("${_qemu_arg[@]}")
+}
 
 main(){
     # /dev/console=last console=
     if is_graphic "$@";then
         kernel_parameters+=("console=ttyS0")
         kernel_parameters+=("console=tty1")
+        qemu_args+=(-device virtio-vga)
     else
         kernel_parameters+=("console=tty1")
         kernel_parameters+=("console=ttyS0")
     fi
-
     qemu_args_kernel+=(-append "${kernel_parameters[*]}")
-    qemu_args+=("${qemu_args_kernel[@]}")
-    #qemu_args+=("${qemu_args_efi[@]}")
-    #qemu_args+=("${qemu_args_bios[@]}")
-    qemu_args+=("$@")
+    select_arg_template "$@"
 
     for arg in "${qemu_args[@]}";do
         echo "$arg"
