@@ -289,7 +289,7 @@ self_qemu_ubl(){
     sudo install -vT ../bzImage   "$mount_root"/boot/vmlinuz-linux
     sudo install -vT ./initrd.img "$mount_root"/boot/initramfs-linux.img
 
-    if [ -e "$mount_root"/boot/grub/grub.cfg ]; then
+    if [ -e "$mount_root"/boot/grub/menu.lst ]; then
         echo "Copy bzImage and initrd, without reconfig"
     else
         sudo mount --bind ../pkgs/archives "$mount_root"/var/cache/apt/archives
@@ -338,7 +338,7 @@ setup (hd0)
 quit
 EOF_GRUB
 EOF
-        chmod +x /root/install_grub.sh
+        sudo arch-chroot "$mount_root" env PATH="$debian_path" chmod +x /root/install_grub.sh
 
     fi
 
