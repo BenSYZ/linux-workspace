@@ -286,13 +286,16 @@ self_qemu_ubl(){
     _fsck
     _mount
 
-    sudo install -vT ../bzImage   arch/boot/vmlinuz-linux
-    sudo install -vT ./initrd.img arch/boot/initramfs-linux.img
+    sudo install -vT ../bzImage   "$mount_root"/boot/vmlinuz-linux
+    sudo install -vT ./initrd.img "$mount_root"/boot/initramfs-linux.img
 
     if [ -e "$mount_root"/boot/grub/grub.cfg ]; then
         echo "Copy bzImage and initrd, without reconfig"
     else
+        sudo mount --bind ../pkgs/archives "$mount_root"/var/cache/apt/archives
+        sudo arch-chroot "$mount_root" env PATH="$debian_path" apt-get -y update
         sudo arch-chroot "$mount_root" env PATH="$debian_path" apt-get -y install grub
+        sudo umount "$mount_root"/var/cache/apt/archives
 
         # with --removable grub-install will install as default bootx.efi
         # or we need to do grub-install with kernel-boot up
@@ -302,26 +305,40 @@ self_qemu_ubl(){
         #    sed -i 's/^\(#GRUB_TERMINAL_OUTPUT.*\)/\1\nGRUB_TERMINAL_OUTPUT="gfxterm console"/;
         #        s/^\(GRUB_CMDLINE_LINUX_DEFAULT.*\)/#\1\nGRUB_CMDLINE_LINUX="nokconsole=tty1 console=ttyS0 nokaslr"/' \
         #        /etc/default/grub
-
         sudo arch-chroot "$mount_root" env PATH="$debian_path" mkdir -p /boot/grub/
+        sudo arch-chroot "$mount_root" env PATH="$debian_path" \
+            cp /usr/lib/grub/x86_64-pc/stage1 \
+               /usr/lib/grub/x86_64-pc/e2fs_stage1_5 \
+               /usr/lib/grub/x86_64-pc/stage2 \
+               /boot/grub
         cat << EOF | sudo arch-chroot "$mount_root" env PATH="$debian_path" tee /boot/grub/menu.lst >/dev/null
 default             0
 timeout             2
 
 title               GNU/Linux, kernel 2.6.24, nographic
 root                (hd0,1)
-kernel              /boot/bzImage root=/dev/hda1 ro console=ttyS0 nokaslr
-initrd              /boot/rootfs.img
+kernel              /boot/vmlinuz-linux root=/dev/hda2 ro console=ttyS0 nokaslr
+initrd              /boot/initramfs-linux.img
 #savedefault
 
 title               GNU/Linux, kernel 2.6.24
 root                (hd0,1)
-kernel              /boot/bzImage root=/dev/hda1 ro nokaslr
-initrd              /boot/rootfs.img
+kernel              /boot/vmlinuz-linux root=/dev/hda2 ro nokaslr
+initrd              /boot/initramfs-linux.img
 #savedefault
 EOF
 
-
+        cat << EOF | sudo arch-chroot "$mount_root" env PATH="$debian_path" tee /root/install_grub.sh >/dev/null
+#!/bin/bash
+cat << EOF_GRUB | grub --batch
+device (hd0) /dev/hda
+root (hd0,1)
+cat /boot/grub/menu.lst
+setup (hd0)
+quit
+EOF_GRUB
+EOF
+        chmod +x /root/install_grub.sh
 
     fi
 
