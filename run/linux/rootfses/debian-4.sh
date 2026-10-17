@@ -184,6 +184,8 @@ EOF
 
     genfstab -U "$mount_root" |grep '[[:space:]]/[[:space:]]' -B 1 | \
         sudo arch-chroot "$mount_root" env PATH="$debian_path" tee -a /etc/fstab >/dev/null
+    sudo arch-chroot "$mount_root" env PATH="$debian_path"  \
+        sed -i 's/rw,relatime/defaults,errors=remount-ro/' /etc/fstab
 
     #echo "PermitRootLogin prohibit-password" | sudo arch-chroot "$mount_root" tee /etc/ssh/sshd_config.d/90-enable-root.conf >/dev/null
     echo "UseDNS no" | sudo arch-chroot "$mount_root" tee -a /etc/ssh/sshd_config >/dev/null

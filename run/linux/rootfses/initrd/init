@@ -29,6 +29,7 @@ else
         [ -e "$1" ] || mknod "$@"
     }
     t_mknod /dev/sda     b 8 0
+    t_mknod /dev/sda1    b 8 1
     t_mknod /dev/sda2    b 8 2
 
     t_mknod /dev/hda     b 3 0
@@ -40,6 +41,8 @@ else
     t_mknod /dev/ttyS0   c 4 64
 
     t_mknod /dev/console c 5 1
+
+    t_mknod /dev/null    c 1 3
 fi
 
 echo "ctrl+c to run sh"
@@ -51,8 +54,7 @@ if ! setsid cttyhack timeout 3 sleep 1;then
 fi
 
 mkdir -p new_root
-mount /dev/sda2 new_root
-#mount /dev/sda1 new_root/boot
+mount /dev/sda1 new_root
 
 mount --move /proc /new_root/proc
 mount --move /sys  /new_root/sys
