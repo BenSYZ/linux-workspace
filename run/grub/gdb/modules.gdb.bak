@@ -1,0 +1,12 @@
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/fs/ext2/ext2.o -readnow -o 0xffffffff880d3000
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/fs/mbcache.o -readnow -o 0xffffffff880ce000
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/drivers/scsi/sd_mod.o -readnow -o 0xffffffff880c4000
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/drivers/ata/ata_generic.o -readnow -o 0xffffffff880bf000
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/drivers/ata/ata_piix.o -readnow -o 0xffffffff880b7000
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/drivers/ata/libata.o -readnow -o 0xffffffff8808e000
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/drivers/scsi/scsi_mod.o -readnow -o 0xffffffff88063000
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/fs/proc/generic.o -readnow -o 0xffffffff8805f000
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/drivers/net/e1000/e1000.o -readnow -o 0xffffffff8803c000
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/drivers/acpi/thermal.o -readnow -o 0xffffffff88010000
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/arch/x86/kernel/acpi/processor.o -readnow -o 0xffffffff88004000
+add-symbol-file /home/ben/work/linux/linux-2.6.24/src/linux-2.6.24/drivers/acpi/fan.o -readnow -o 0xffffffff88000000
