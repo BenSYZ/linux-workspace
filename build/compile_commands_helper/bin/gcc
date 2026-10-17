@@ -1,0 +1,3 @@
+#!/bin/bash
+echo "cd \"$PWD\"; gcc $*" >> /tmp/build_log.txt
+exec /usr/bin/gcc "$@"

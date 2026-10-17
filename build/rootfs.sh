@@ -26,15 +26,22 @@ main(){
     ## sudo tune2fs -O extents,uninit_bg,dir_index rootfs.img
     ## sudo e2fsck -fp rootfs.img
 
-
     sudo mount "$build_img" "$mount_root"
     sudo mount --bind ./pkgs/archives "$mount_root"/var/cache/apt/archives
 
     sudo arch-chroot "$mount_root" env PATH="$debian_path" apt-get -y update
+    # linux
     sudo arch-chroot "$mount_root" env PATH="$debian_path" \
         apt-get -y build-dep linux-image-2.6.24-etchnhalf.1-amd64
+    # linux target: menuconfig and tags
     sudo arch-chroot "$mount_root" env PATH="$debian_path" \
         apt-get -y install ncurses-dev ctags
+
+    # grub
+    sudo arch-chroot "$mount_root" env PATH="$debian_path" \
+        apt-get -y build-dep grub
+    sudo arch-chroot "$mount_root" env PATH="$debian_path" \
+        apt-get -y install fakeroot
 
     sudo umount "$mount_root"/var/cache/apt/archives
     sudo umount "$mount_root"

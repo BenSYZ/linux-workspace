@@ -14,15 +14,23 @@ main(){
         sudo chown "$UID":"$UID" "$mount_root$src_dir"
     fi
 
+    cc_helper_dir=$(realpath "$this_dir"/../build/compile_commands_helper)
+    if ! [ -e "$mount_root$cc_helper_dir" ];then
+        sudo mkdir -p "$mount_root$cc_helper_dir"
+        sudo chown "$UID":"$UID" "$mount_root$cc_helper_dir"
+    fi
+
     bwrap \
-        --setenv PATH "$debian_path" \
-        --setenv TERM "xterm"        \
-        --bind "$mount_root" /       \
-        --dev /dev                   \
-        --bind "$src_dir" "$src_dir" \
-        --uid 0                      \
-        --gid 0                      \
-        --chdir "$PWD"               \
+        --setenv PATH "$debian_path"             \
+        --setenv TERM "xterm"                    \
+        --bind "$mount_root" /                   \
+        --bind /tmp /tmp                         \
+        --dev /dev                               \
+        --bind "$src_dir" "$src_dir"             \
+        --bind "$cc_helper_dir" "$cc_helper_dir" \
+        --uid 0                                  \
+        --gid 0                                  \
+        --chdir "$PWD"                           \
         "${@:-/bin/bash}"
         #--bind "$PWD" "$PWD" \
 
