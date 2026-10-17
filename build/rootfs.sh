@@ -13,7 +13,7 @@ main(){
 
         #sudo dd if="$nbd_dev"p2 of=./rootfs.img conv=sparse
         #sudo dd if="$nbd_dev"p2 of=./rootfs.img conv=sparse
-        sudo cp "$nbd_dev"p2 "$build_img" --sparse=always
+        sudo cp "$nbd_dev"p"$root_part_index" "$build_img" --sparse=always
         sudo chown "$UID":"$UID" "$build_img"
 
         _fsck
@@ -36,7 +36,6 @@ main(){
     # linux target: menuconfig and tags
     sudo arch-chroot "$mount_root" env PATH="$debian_path" \
         apt-get -y install ncurses-dev ctags
-
     # grub
     sudo arch-chroot "$mount_root" env PATH="$debian_path" \
         apt-get -y build-dep grub

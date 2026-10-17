@@ -13,6 +13,7 @@ init_config=debian.init.config
 
 function_prefix="self_qemu_"
 debian_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+root_part_index=1
 connected(){
     if ! pgrep -f "qemu-nbd --connect=$nbd_dev $qcow2" &>/dev/null;then
         return 1
@@ -47,7 +48,7 @@ _mounted(){
 }
 
 _mount(){
-    local partition="$nbd_dev"p2
+    local partition="$nbd_dev"p"$root_part_index"
     local mount_point="$mount_root"
     if ! _mounted "$partition" "$mount_point";then
         sudo mount "$partition" "$mount_point"
@@ -60,12 +61,7 @@ _mount(){
     #fi
 }
 _umount(){
-    #local partition="$nbd_dev"p1
-    #local mount_point="$mount_root"/boot
-    #if _mounted "$partition" "$mount_point";then
-    #    sudo umount "$partition"
-    #fi
-    local partition="$nbd_dev"p2
+    local partition="$nbd_dev"p"$root_part_index"
     local mount_point="$mount_root"
     if _mounted "$partition" "$mount_point";then
         sudo umount "$partition"
@@ -75,7 +71,7 @@ _umount(){
 
 _fsck(){
     #{ sudo fsck.fat -a "$nbd_dev"p1 || sudo fsck.fat -a "$nbd_dev"p1 ; }
-    sudo fsck.ext3 "$nbd_dev"p2
+    sudo fsck.ext3 "$nbd_dev"p"$root_part_index"
 }
 self_qemu_mount(){
     _connect
@@ -99,12 +95,13 @@ self_qemu_init(){
         # must be dos or grub cannot recognize it
         cat << EOF
 label: dos
-device: /dev/sda
+device: /dev/nbd0
 unit: sectors
 sector-size: 512
 
-# reserve 1G
-/dev/sda2 : start=     2099200, size=   132118528, type=83
+# grub require boot be the first part
+/dev/nbd0p1 : start=        2048, size=     1685504, type=83
+# reserve 200MiB for swap or other
 EOF
 }
 
@@ -120,7 +117,7 @@ EOF
         ./initrd.sh
     fi
 
-    qemu-img create -f qcow2 "$qcow2" 64G
+    qemu-img create -f qcow2 "$qcow2" 1G
     _connect
     # shellcheck disable=2024
     sudo sfdisk "$nbd_dev" < <(partition_table)
@@ -128,9 +125,9 @@ EOF
     # mount: Mounting /dev/sda1 on /root failed: No such file or directory
     # Inode 大小不对
     # mount: Mounting /dev/sda1 on /root failed: Invalid argument
-    sudo mkfs.ext3 -I 128 "$nbd_dev"p2
+    sudo mkfs.ext3 -I 128 "$nbd_dev"p"$root_part_index"
 
-    sudo mount "$nbd_dev"p2 "$mount_root"
+    sudo mount "$nbd_dev"p"$root_part_index" "$mount_root"
 
     mkdir -p ../pkgs/archives
     sudo debootstrap --cache-dir="$(realpath ../pkgs/archives)" \
@@ -185,8 +182,8 @@ EOF
     sudo arch-chroot "$mount_root" env PATH="$debian_path" sed -i \
         's/^#\(.*ttyS0.*\)/\1/' /etc/inittab
 
-
-    # TODO: fstab
+    genfstab -U "$mount_root" |grep '[[:space:]]/[[:space:]]' -B 1 | \
+        sudo arch-chroot "$mount_root" env PATH="$debian_path" tee -a /etc/fstab >/dev/null
 
     #echo "PermitRootLogin prohibit-password" | sudo arch-chroot "$mount_root" tee /etc/ssh/sshd_config.d/90-enable-root.conf >/dev/null
     echo "UseDNS no" | sudo arch-chroot "$mount_root" tee -a /etc/ssh/sshd_config >/dev/null
@@ -282,16 +279,56 @@ self_qemu_chroot(){
 
 # update_bootloader
 self_qemu_ubl(){
-    _connect
-    _fsck
-    _mount
+    install_grub(){
+        grub_menu(){
+            cat << EOF
+default             0
+timeout             2
 
-    sudo install -vT ../bzImage   "$mount_root"/boot/vmlinuz-linux
-    sudo install -vT ./initrd.img "$mount_root"/boot/initramfs-linux.img
+title               GNU/Linux, kernel 2.6.24, nographic
+root                (hd0,0)
+kernel              /boot/vmlinuz-linux root=/dev/sda2 ro console=ttyS0 nokaslr
+initrd              /boot/initramfs-linux.img
+#savedefault
 
-    if [ -e "$mount_root"/boot/grub/menu.lst ]; then
-        echo "Copy bzImage and initrd, without reconfig"
-    else
+title               GNU/Linux, kernel 2.6.24
+root                (hd0,0)
+kernel              /boot/vmlinuz-linux root=/dev/sda2 ro nokaslr
+initrd              /boot/initramfs-linux.img
+#savedefault
+EOF
+        }
+
+        grub_install(){
+            local grub_bin="$1"
+            # grub: lib/device.c:1121: sprintf (dev + strlen(dev), "%d", ((partition >> 16) & 0xFF) + 1);
+            # works for sda and sda1
+            # but not work for /dev/nbd0 /dev/nbd0p1
+            grub_menu| sudo arch-chroot "$mount_root" env PATH="$debian_path" tee /boot/grub/menu.lst >/dev/null
+            sudo ln -s "$nbd_dev"p"$root_part_index" "$nbd_dev""$root_part_index"
+            cat << EOF | sudo arch-chroot "$mount_root" env PATH="$debian_path" "$grub_bin" --batch
+device (hd0) $nbd_dev
+root (hd0,$((root_part_index-1)))
+cat /boot/grub/menu.lst
+setup (hd0)
+quit
+EOF
+            sudo rm "$nbd_dev""$root_part_index"
+        }
+
+        if [ -e "$mount_root"/boot/grub/menu.lst ]; then
+            echo "Copy bzImage and initrd, without reconfig"
+            return
+        fi
+        sudo arch-chroot "$mount_root" env PATH="$debian_path" mkdir -p /boot/grub/
+        if [ -e ../../grub/bin/grub ];then
+            tar --dereference -cf - -C ../../grub/bin/ stage1 e2fs_stage1_5 stage2 \
+                | sudo arch-chroot "$mount_root" env PATH="$debian_path" tar xvf - -C /boot/grub
+            tar --dereference -cf - -C ../../grub/bin/ grub \
+                | sudo arch-chroot "$mount_root" env PATH="$debian_path" tar xvf - -C /usr/local/bin
+            grub_install /usr/local/bin/grub
+            return
+        fi
         sudo mount --bind ../pkgs/archives "$mount_root"/var/cache/apt/archives
         sudo arch-chroot "$mount_root" env PATH="$debian_path" apt-get -y update
         sudo arch-chroot "$mount_root" env PATH="$debian_path" apt-get -y install grub
@@ -311,36 +348,19 @@ self_qemu_ubl(){
                /usr/lib/grub/x86_64-pc/e2fs_stage1_5 \
                /usr/lib/grub/x86_64-pc/stage2 \
                /boot/grub
-        cat << EOF | sudo arch-chroot "$mount_root" env PATH="$debian_path" tee /boot/grub/menu.lst >/dev/null
-default             0
-timeout             2
 
-title               GNU/Linux, kernel 2.6.24, nographic
-root                (hd0,1)
-kernel              /boot/vmlinuz-linux root=/dev/sda2 ro console=ttyS0 nokaslr
-initrd              /boot/initramfs-linux.img
-#savedefault
+        grub_install grub
+    }
 
-title               GNU/Linux, kernel 2.6.24
-root                (hd0,1)
-kernel              /boot/vmlinuz-linux root=/dev/sda2 ro nokaslr
-initrd              /boot/initramfs-linux.img
-#savedefault
-EOF
 
-        cat << EOF | sudo arch-chroot "$mount_root" env PATH="$debian_path" tee /root/install_grub.sh >/dev/null
-#!/bin/bash
-cat << EOF_GRUB | grub --batch
-device (hd0) /dev/sda
-root (hd0,1)
-cat /boot/grub/menu.lst
-setup (hd0)
-quit
-EOF_GRUB
-EOF
-        sudo arch-chroot "$mount_root" env PATH="$debian_path" chmod +x /root/install_grub.sh
+    _connect
+    _fsck
+    _mount
 
-    fi
+    sudo install -vT ../bzImage   "$mount_root"/boot/vmlinuz-linux
+    sudo install -vT ./initrd.img "$mount_root"/boot/initramfs-linux.img
+
+    install_grub
 
 
     _umount

@@ -23,6 +23,7 @@ main(){
     bwrap \
         --setenv PATH "$debian_path"             \
         --setenv TERM "xterm"                    \
+        --setenv LANG "C"                    \
         --bind "$mount_root" /                   \
         --bind /tmp /tmp                         \
         --dev /dev                               \
