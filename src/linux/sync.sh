@@ -21,18 +21,19 @@ get_new_versions(){
                     }
                     print $3
                 }
-            }'
+            }' | tac
 }
 
 update(){
     cd ./linux || exit
-    for v in $(get_new_versions);do
+    for v in $(get_new_versions | tail -n 1);do
         echo "$v"
         git fetch --depth=1 origin "$v"
         git fetch --depth 1 origin "refs/tags/$v":"refs/tags/$v"
     done
     if ! [ -z "$v" ];then
-        git checkout "$v"
+        git stash
+        git reset --hard "$v"
     fi
 }
 
