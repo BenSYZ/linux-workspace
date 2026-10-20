@@ -175,6 +175,16 @@ EOF
     #export TERM=xterm
     #export LANG=C
 
+    local extract_dir=".busybox_extract"
+    mkdir -p "$extract_dir"
+    tar --zstd -xf "$(find ../pkgs/ -name "busybox-*.pkg.tar.zst" | tail -n 1)" -C "$extract_dir"
+    tar --dereference -cf - -C "$extract_dir"/usr/bin/ busybox \
+                | sudo arch-chroot "$mount_root" env PATH="$debian_path" tar xvf - -C /usr/bin/
+    rm -r "$extract_dir"
+    sudo arch-chroot "$mount_root" env PATH="$debian_path" ln -sf ../../../usr/bin/busybox /usr/local/bin/ip
+
+
+
     #  update-initramfs  -u
 
 
