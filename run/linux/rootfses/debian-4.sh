@@ -168,6 +168,9 @@ EOF
          s/main$/main contrib non-free/;
          s/^\(deb\)\( .*\)/\1\2\n\1-src\2/' /etc/apt/sources.list
 
+
+    sudo arch-chroot "$mount_root" env PATH="$debian_path" apt-get -y update
+    sudo arch-chroot "$mount_root" env PATH="$debian_path" apt-get -y install udev
     #apt-get update
     #apt-get build-dep linux-image-2.6.24-etchnhalf.1-amd64
     #useradd -m -G sudo ben -p 1 -u 1000

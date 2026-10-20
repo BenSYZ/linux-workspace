@@ -37,7 +37,7 @@ else
     t_mknod /dev/hda2    b 3 2
 
     t_mknod /dev/tty1    c 4 0
-    t_mknod /dev/tty1    c 4 1
+    t_mknod /dev/tty2    c 4 1
     t_mknod /dev/ttyS0   c 4 64
 
     t_mknod /dev/console c 5 1
