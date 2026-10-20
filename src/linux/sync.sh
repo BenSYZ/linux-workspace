@@ -6,6 +6,9 @@ init(){
             |jq '.releases[] | select(.moniker == "mainline").version' -r
         )"
     git clone --depth 1 --branch "$latest_version" https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+    cd linux || exit 1
+    git config fetch.deepen 1
+    git config remote.origin.fetch "+refs/tags/*:refs/tags/*"
 }
 
 get_new_versions(){
@@ -40,6 +43,7 @@ update(){
 main(){
     if ! [ -e linux ];then
         init
+        return 0
     fi
     update
     return 0
